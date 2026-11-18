@@ -568,19 +568,19 @@ class Config(context: Context) : BaseConfig(context) {
         set(showFolderMediaCount) = prefs.edit().putInt(FOLDER_MEDIA_COUNT, showFolderMediaCount).apply()
 
     var folderStyle: Int
-        get() = prefs.getInt(FOLDER_THUMBNAIL_STYLE, FOLDER_STYLE_SQUARE)
+        get() = prefs.getInt(FOLDER_THUMBNAIL_STYLE, FOLDER_STYLE_ROUNDED_CORNERS)
         set(folderStyle) = prefs.edit().putInt(FOLDER_THUMBNAIL_STYLE, folderStyle).apply()
 
     var limitFolderTitle: Boolean
-        get() = prefs.getBoolean(LIMIT_FOLDER_TITLE, false)
+        get() = prefs.getBoolean(LIMIT_FOLDER_TITLE, true)
         set(limitFolderTitle) = prefs.edit().putBoolean(LIMIT_FOLDER_TITLE, limitFolderTitle).apply()
 
     var thumbnailSpacing: Int
-        get() = prefs.getInt(THUMBNAIL_SPACING, 1)
+        get() = prefs.getInt(THUMBNAIL_SPACING, 6)
         set(thumbnailSpacing) = prefs.edit().putInt(THUMBNAIL_SPACING, thumbnailSpacing).apply()
 
     var fileRoundedCorners: Boolean
-        get() = prefs.getBoolean(FILE_ROUNDED_CORNERS, false)
+        get() = prefs.getBoolean(FILE_ROUNDED_CORNERS, true)
         set(fileRoundedCorners) = prefs.edit().putBoolean(FILE_ROUNDED_CORNERS, fileRoundedCorners).apply()
 
     var customFoldersOrder: String
@@ -602,4 +602,8 @@ class Config(context: Context) : BaseConfig(context) {
     var showPermissionRationale: Boolean
         get() = prefs.getBoolean(SHOW_PERMISSION_RATIONALE, false)
         set(showPermissionRationale) = prefs.edit().putBoolean(SHOW_PERMISSION_RATIONALE, showPermissionRationale).apply()
+
+    var wasLuminaThemeApplied: Boolean
+        get() = prefs.getBoolean("lumina_theme_applied_v1", false)
+        set(value) = prefs.edit().putBoolean("lumina_theme_applied_v1", value).apply()
 }

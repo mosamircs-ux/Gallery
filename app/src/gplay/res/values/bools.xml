@@ -2,4 +2,5 @@
 <resources>
     <bool name="show_donate_in_about">false</bool>
     <bool name="is_google_play_build">true</bool>
+    <bool name="require_all_files_access">false</bool>
 </resources>

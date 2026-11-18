@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.transition.Transition
+import com.google.android.gms.ads.AdView
 import org.fossify.commons.dialogs.CreateNewFolderDialog
 import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.appLockManager
@@ -86,6 +87,7 @@ import org.fossify.gallery.extensions.showRecycleBinEmptyingDialog
 import org.fossify.gallery.extensions.showRestoreConfirmationDialog
 import org.fossify.gallery.extensions.tryDeleteFileDirItem
 import org.fossify.gallery.extensions.updateWidgets
+import org.fossify.gallery.helpers.AdManager
 import org.fossify.gallery.helpers.DIRECTORY
 import org.fossify.gallery.helpers.GET_ANY_INTENT
 import org.fossify.gallery.helpers.GET_IMAGE_INTENT
@@ -145,6 +147,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     private var mStoredTextColor = 0
     private var mStoredPrimaryColor = 0
     private var mStoredThumbnailSpacing = 0
+    private var mBannerAdView: AdView? = null
 
     private val binding by viewBinding(ActivityMediaBinding::inflate)
 
@@ -177,8 +180,18 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
         storeStateVariables()
         setupEdgeToEdge(
             padTopSystem = listOf(binding.mediaMenu),
-            padBottomImeAndSystem = listOf(binding.mediaGrid)
+            padBottomImeAndSystem = listOf(binding.mediaBottomAdDock)
         )
+
+        if (!mIsGetImageIntent && !mIsGetVideoIntent && !mIsGetAnyIntent) {
+            binding.mediaAdBannerContainer.post {
+                if (!isFinishing && !isDestroyed && mBannerAdView == null) {
+                    mBannerAdView = AdManager.attachAdaptiveBanner(this, binding.mediaAdBannerContainer)
+                }
+            }
+        } else {
+            binding.mediaBottomAdDock.beGone()
+        }
 
         if (mShowAll) {
             registerFileUpdateListener()
@@ -198,6 +211,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
 
     override fun onResume() {
         super.onResume()
+        mBannerAdView?.resume()
         updateMenuColors()
         if (mStoredAnimateGifs != config.animateGifs) {
             getMediaAdapter()?.updateAnimateGifs(config.animateGifs)
@@ -267,6 +281,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     }
 
     override fun onPause() {
+        mBannerAdView?.pause()
         super.onPause()
         mIsGettingMedia = false
         binding.mediaRefreshLayout.isRefreshing = false
@@ -293,6 +308,8 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     }
 
     override fun onDestroy() {
+        mBannerAdView?.destroy()
+        mBannerAdView = null
         super.onDestroy()
         if (config.showAll && !isChangingConfigurations) {
             config.temporarilyShowHidden = false

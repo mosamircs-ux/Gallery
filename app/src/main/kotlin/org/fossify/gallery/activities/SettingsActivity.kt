@@ -52,6 +52,9 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun setupSettingItems() {
+        binding.settingsColorCustomizationSectionLabel.beGone()
+        binding.settingsColorCustomizationHolder.beGone()
+        binding.settingsColorCustomizationDivider.beGone()
         setupCustomizeColors()
         setupUseEnglish()
         setupLanguage()
@@ -845,8 +848,7 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun getExportFavoritesFilename(): String {
-        val appName = baseConfig.appId.removeSuffix(".debug").removePrefix("org.fossify.")
-        return "$appName-favorites_${getCurrentFormattedDateTime()}"
+        return "lumina-gallery-favorites_${getCurrentFormattedDateTime()}"
     }
 
     private fun setupImportFavorites() {

@@ -142,10 +142,6 @@ class EditActivity : BaseCropActivity() {
             )
         )
 
-        if (checkAppSideloading()) {
-            return
-        }
-
         setupOptionsMenu()
         handlePermission(getPermissionToRequest()) {
             if (!it) {

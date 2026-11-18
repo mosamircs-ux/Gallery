@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Fossify Gallery</string>
+    <string name="app_name">Lumina Gallery</string>
     <string name="gif">GIF</string>
     <string name="raw">RAW</string>
     <string name="svg">SVG</string>
-    <string name="package_name">org.fossify.gallery</string>
+    <string name="package_name">com.luminagallery.gallery</string>
     <string name="playback_speed_display_text">2x >></string>
+    <string name="admob_app_id">ca-app-pub-4969792934066333~9936075974</string>
 </resources>

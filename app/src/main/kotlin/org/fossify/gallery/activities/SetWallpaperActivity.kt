@@ -44,10 +44,6 @@ class SetWallpaperActivity : BaseCropActivity() {
         )
         setupBottomActions()
 
-        if (checkAppSideloading()) {
-            return
-        }
-
         setupOptionsMenu()
         if (intent.data == null) {
             val pickIntent = Intent(applicationContext, MainActivity::class.java)

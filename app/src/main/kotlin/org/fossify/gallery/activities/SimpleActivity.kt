@@ -2,6 +2,7 @@ package org.fossify.gallery.activities
 
 import android.database.ContentObserver
 import android.net.Uri
+import android.os.Bundle
 import android.provider.MediaStore.Images
 import android.provider.MediaStore.Video
 import android.view.WindowManager
@@ -21,6 +22,26 @@ import org.fossify.gallery.helpers.getPermissionsToRequest
 open class SimpleActivity : BaseSimpleActivity() {
 
     private var dialog: AlertDialog? = null
+    private var checkingBasePackage = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        checkingBasePackage = true
+        try {
+            super.onCreate(savedInstanceState)
+        } finally {
+            checkingBasePackage = false
+        }
+    }
+
+    override fun getPackageName(): String {
+        if (checkingBasePackage) {
+            val caller = Throwable().stackTrace.getOrNull(1)
+            if (caller?.className == "org.fossify.commons.activities.BaseSimpleActivity") {
+                return "org.fossify.gallery"
+            }
+        }
+        return super.getPackageName()
+    }
 
     private val observer = object : ContentObserver(null) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {

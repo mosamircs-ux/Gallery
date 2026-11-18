@@ -11,13 +11,15 @@ import android.provider.MediaStore.Video
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.ads.AdView
 import org.fossify.commons.dialogs.CreateNewFolderDialog
 import org.fossify.commons.dialogs.FilePickerDialog
 import org.fossify.commons.dialogs.RadioGroupDialog
-import org.fossify.commons.extensions.appLaunched
 import org.fossify.commons.extensions.appLockManager
 import org.fossify.commons.extensions.areSystemAnimationsEnabled
+import org.fossify.commons.extensions.baseConfig
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.beVisibleIf
@@ -27,6 +29,8 @@ import org.fossify.commons.extensions.getDoesFilePathExist
 import org.fossify.commons.extensions.getFileCount
 import org.fossify.commons.extensions.getFilePublicUri
 import org.fossify.commons.extensions.getFilenameFromPath
+import org.fossify.commons.extensions.getInternalStoragePath
+import org.fossify.commons.extensions.updateSDCardPath
 import org.fossify.commons.extensions.getLatestMediaByDateId
 import org.fossify.commons.extensions.getLatestMediaId
 import org.fossify.commons.extensions.getMimeType
@@ -113,6 +117,7 @@ import org.fossify.gallery.extensions.storeDirectoryItems
 import org.fossify.gallery.extensions.tryDeleteFileDirItem
 import org.fossify.gallery.extensions.updateDBDirectory
 import org.fossify.gallery.extensions.updateWidgets
+import org.fossify.gallery.helpers.AdManager
 import org.fossify.gallery.helpers.DIRECTORY
 import org.fossify.gallery.helpers.GET_ANY_INTENT
 import org.fossify.gallery.helpers.GET_IMAGE_INTENT
@@ -196,12 +201,13 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
     private var mStoredTextColor = 0
     private var mStoredPrimaryColor = 0
     private var mStoredStyleString = ""
+    private var mBannerAdView: AdView? = null
     private val binding by viewBinding(ActivityMainBinding::inflate)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-        appLaunched(BuildConfig.APPLICATION_ID)
+        luminaAppLaunched(BuildConfig.APPLICATION_ID)
 
         if (savedInstanceState == null) {
             config.temporarilyShowHidden = false
@@ -231,12 +237,13 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
         refreshMenuItems()
 
         setupEdgeToEdge(
-            padBottomImeAndSystem = listOf(binding.directoriesGrid)
+            padBottomImeAndSystem = listOf(binding.luminaBottomDock)
         )
+
+        setupLuminaUi()
 
         binding.directoriesRefreshLayout.setOnRefreshListener { getDirectories() }
         storeStateVariables()
-        checkWhatsNewDialog()
         setupLatestMediaId()
 
         if (!config.wereFavoritesPinned) {
@@ -290,6 +297,8 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
 
     override fun onResume() {
         super.onResume()
+        mBannerAdView?.resume()
+        updateLuminaFilterChips()
         updateMenuColors()
         config.isThirdPartyIntent = false
         mDateFormat = config.dateFormat
@@ -352,6 +361,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
     }
 
     override fun onPause() {
+        mBannerAdView?.pause()
         super.onPause()
         binding.directoriesRefreshLayout.isRefreshing = false
         mIsGettingDirs = false
@@ -375,6 +385,8 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
     }
 
     override fun onDestroy() {
+        mBannerAdView?.destroy()
+        mBannerAdView = null
         super.onDestroy()
         if (!isChangingConfigurations) {
             config.temporarilyShowHidden = false
@@ -454,8 +466,6 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
                 findItem(R.id.set_as_default_folder).isVisible = !config.defaultFolder.isEmpty()
                 findItem(R.id.open_recycle_bin).isVisible =
                     config.useRecycleBin && !config.showRecycleBinAtFolders
-                findItem(R.id.more_apps_from_us).isVisible =
-                    resources.getBoolean(org.fossify.commons.R.bool.is_google_play_build)
             }
         }
 
@@ -508,7 +518,6 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
                 R.id.open_recycle_bin -> openRecycleBin()
                 R.id.column_count -> changeColumnCount()
                 R.id.set_as_default_folder -> setAsDefaultFolder()
-                R.id.more_apps_from_us -> launchMoreAppsFromUsIntent()
                 R.id.settings -> launchSettings()
                 R.id.about -> launchAbout()
                 else -> return@setOnMenuItemClickListener false
@@ -1068,13 +1077,93 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
     private fun itemClicked(path: String) {
         handleLockedFolderOpening(path) { success ->
             if (success) {
-                Intent(this, MediaActivity::class.java).apply {
-                    putExtra(SKIP_AUTHENTICATION, true)
-                    putExtra(DIRECTORY, path)
-                    handleMediaIntent(this)
+                val launchMedia = {
+                    Intent(this, MediaActivity::class.java).apply {
+                        putExtra(SKIP_AUTHENTICATION, true)
+                        putExtra(DIRECTORY, path)
+                        handleMediaIntent(this)
+                    }
+                }
+                if (mIsThirdPartyIntent) {
+                    launchMedia()
+                } else {
+                    AdManager.maybeShowInterstitial(this) {
+                        launchMedia()
+                    }
                 }
             }
         }
+    }
+
+    private fun luminaAppLaunched(appId: String) {
+        baseConfig.internalStoragePath = getInternalStoragePath()
+        updateSDCardPath()
+        baseConfig.appId = appId
+        baseConfig.appRunCount++
+    }
+
+    private fun setupLuminaUi() {
+        binding.navTabAlbums.setOnClickListener {
+            binding.directoriesGrid.smoothScrollToPosition(0)
+        }
+        binding.navTabAllMedia.setOnClickListener {
+            showAllMedia()
+        }
+        binding.navTabFavorites.setOnClickListener {
+            itemClicked(FAVORITES)
+        }
+        binding.navTabSettings.setOnClickListener {
+            launchSettings()
+        }
+
+        binding.chipFilterAll.setOnClickListener { applyQuickFilter(getDefaultFileFilter()) }
+        binding.chipFilterPhotos.setOnClickListener { applyQuickFilter(TYPE_IMAGES) }
+        binding.chipFilterVideos.setOnClickListener { applyQuickFilter(TYPE_VIDEOS) }
+        binding.chipFilterGifs.setOnClickListener { applyQuickFilter(TYPE_GIFS) }
+        updateLuminaFilterChips()
+
+        if (mIsThirdPartyIntent) {
+            binding.luminaBottomNav.beGone()
+            binding.adBannerContainer.beGone()
+        } else {
+            binding.adBannerContainer.post {
+                if (!isFinishing && !isDestroyed && mBannerAdView == null) {
+                    mBannerAdView = AdManager.attachAdaptiveBanner(this, binding.adBannerContainer)
+                }
+            }
+        }
+    }
+
+    private fun applyQuickFilter(newFilter: Int) {
+        if (config.filterMedia != newFilter) {
+            config.filterMedia = newFilter
+            updateLuminaFilterChips()
+            mShouldStopFetching = true
+            binding.directoriesRefreshLayout.isRefreshing = true
+            binding.directoriesGrid.adapter = null
+            getDirectories()
+        }
+    }
+
+    private fun updateLuminaFilterChips() {
+        val current = config.filterMedia
+        val activeColor = ContextCompat.getColor(this, R.color.lumina_text_primary)
+        val inactiveColor = ContextCompat.getColor(this, R.color.lumina_text_secondary)
+
+        val isPhotosOnly = current == TYPE_IMAGES
+        val isVideosOnly = current == TYPE_VIDEOS
+        val isGifsOnly = current == TYPE_GIFS
+        val isAll = !isPhotosOnly && !isVideosOnly && !isGifsOnly
+
+        fun styleChip(view: android.widget.TextView, active: Boolean) {
+            view.setBackgroundResource(if (active) R.drawable.lumina_chip_active else R.drawable.lumina_chip_inactive)
+            view.setTextColor(if (active) activeColor else inactiveColor)
+        }
+
+        styleChip(binding.chipFilterAll, isAll)
+        styleChip(binding.chipFilterPhotos, isPhotosOnly)
+        styleChip(binding.chipFilterVideos, isVideosOnly)
+        styleChip(binding.chipFilterGifs, isGifsOnly)
     }
 
     private fun handleMediaIntent(intent: Intent) {

@@ -7,7 +7,9 @@
 /build
 /captures
 keystore.jks
+lumina-upload.jks
 keystore.properties
+/playstore_release/
 /app/src/proprietary/assets/pesdk_android_license
 /app/src/proprietary/assets/vesdk_android_license
 fastlane/fastlane.json
